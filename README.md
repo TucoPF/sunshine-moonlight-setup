@@ -18,7 +18,7 @@ graph TD
     end
     
     subgraph Network ["Local Network (BBR & fq Optimized)"]
-        VM -- "Sunshine (KMS Video + PipeWire Audio)" --> NUC[Intel NUC Client (Debian 13)]
+        VM -- "Sunshine (KMS Video + PipeWire Audio)" --> NUC["Intel NUC Client (Debian 13)"]
     end
 
     NUC -- "Moonlight-qt (Intel HD 620 HW Decode)" --> Display["TV Monitor 1368x768 / 1080p"]
