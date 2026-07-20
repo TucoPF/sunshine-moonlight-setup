@@ -25,8 +25,8 @@ graph TD
 ```
 
 *   **Host Server (`skynet`)**: Custom ATX Tower, AMD Ryzen 7 9700X, 32GB DDR5, running Proxmox VE 9.2.3. Passes the onboard graphics (`79:00.0` VGA and `79:00.1` Audio) to the guest VM.
-*   **Streaming Guest VM (`Workstation` - `fddf::2222` / `192.168.1.22`)**: Debian 13 (Trixie), minimal KDE Plasma Wayland session, GPU-accelerated encoding via VA-API/Vulkan.
-*   **Client Node (`Nuc` - `fddf::3` / `192.168.1.253`)**: Intel NUC7i3DNHE (i3-7100U, HD 620 GPU), running Moonlight-qt client over Wi-Fi.
+*   **Streaming Guest VM (`Workstation` - `fddf::XXXX` / `192.168.1.XX`)**: Debian 13 (Trixie), minimal KDE Plasma Wayland session, GPU-accelerated encoding via VA-API/Vulkan.
+*   **Client Node (`Nuc` - `fddf::YYYY` / `192.168.1.YY`)**: Intel NUC7i3DNHE (i3-7100U, HD 620 GPU), running Moonlight-qt client over Wi-Fi.
 
 ---
 
@@ -138,9 +138,9 @@ For Sunshine to capture the display, a valid Wayland graphical session must run 
     min_log_level = info
     address_family = both
     origin_web_ui_allowed = lan
-    csrf_allowed_origins = https://[fddf::2222],https://192.168.1.22
+    csrf_allowed_origins = https://[fddf::XXXX],https://192.168.1.XX
     ```
-    *Note: Replace ULA `fddf::2222` and local IP `192.168.1.22` with your VM's network parameters.*
+    *Note: Replace ULA `fddf::XXXX` and local IP `192.168.1.XX` with your VM's network parameters.*
 4.  **Auto-Discovery (Avahi Setup)**:
     Install Avahi so Moonlight clients can automatically discover the VM:
     ```bash
@@ -202,18 +202,18 @@ auto wlp1s0
 
 # IPv4 Static Configuration
 iface wlp1s0 inet static
-        address 192.168.1.253
+        address 192.168.1.YY
         netmask 255.255.255.0
-        gateway 192.168.1.1
+        gateway 192.168.1.GW
         dns-nameservers 1.1.1.1 9.9.9.9
         wpa-ssid "Maison"
         wpa-psk  "Eliculolaop38*"
 
 # IPv6 Static Configuration (Link-Local Gateway scoped to interface)
 iface wlp1s0 inet6 static
-        address fddf::3
+        address fddf::YYYY
         netmask 64
-        gateway fe80::3a07:16ff:fe21:c7c4%wlp1s0
+        gateway fe80::GATEWAY_MAC%wlp1s0
         dns-nameservers 2606:4700:4700::1111 2001:4860:4860::8888
 ```
 
