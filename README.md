@@ -14,15 +14,16 @@ It covers host network tuning, VM operating system cleanup, GPU passthrough conf
    * [B. Disable systemd SSH Socket Generator](#b-disable-systemd-ssh-socket-generator)
    * [C. Repair EFI FAT volume Dirty Bit](#c-repair-efi-fat-volume-dirty-bit)
    * [D. Update Initramfs](#d-update-initramfs)
-4. [🖥️ Step 3: Graphical Environment & Autologin Setup](#️-step-3-graphical-environment--autologin-setup)
+4. [🖥️ Step 3: Graphical Environment & Autologin Setup](#-step-3-graphical-environment--autologin-setup)
 5. [🎮 Step 4: Sunshine Installation & Hardening](#-step-4-sunshine-installation--hardening)
 6. [💻 Step 5: NUC Client Latency Optimization](#-step-5-nuc-client-latency-optimization)
    * [A. Disable Wi-Fi Power Saving](#a-disable-wi-fi-power-saving)
-   * [B. Configure CPU Governor to Performance Mode](#b-configure-cpu-governor-to-performance-mode)
+   * [B. Configure CPU Energy Performance Preference (EPP)](#b-configure-cpu-energy-performance-preference-epp)
    * [C. Static Network Configuration (`/etc/network/interfaces`)](#c-static-network-configuration-etcnetworkinterfaces)
-   * [D. Headless EGLFS Direct Display Setup (No Xorg/Wayland Compositor)](#d-headless-eglfs-direct-display-setup-no-xorgwayland-compositor)
-   * [E. Input Device & Latency Tuning](#e-input-device--latency-tuning)
+   * [D. Headless Wayland Kiosk Setup (via Cage Kiosk)](#d-headless-wayland-kiosk-setup-via-cage-kiosk)
+   * [E. Input Device & USB Autosuspend Tuning](#e-input-device--usb-autosuspend-tuning)
    * [F. Moonlight Client Profile Settings](#f-moonlight-client-profile-settings)
+   * [G. Audio Subsystem Stability (PipeWire & Power Saving)](#g-audio-subsystem-stability-pipewire--power-saving)
 
 ---
 
@@ -183,28 +184,19 @@ Ensure the wireless interface (`wlp1s0`) never enters low-power sleep states dur
 sudo iw dev wlp1s0 set power_save off
 ```
 
-### B. Configure CPU Governor to Performance Mode
-Force all Intel CPU cores to react instantly to incoming frames without stepping frequency. Create a persistent systemd service at `/etc/systemd/system/cpu-governor.service`:
+### B. Configure CPU Energy Performance Preference (EPP)
+Under the `intel_pstate` active scaling driver, the CPU's internal Hardware P-States (HWP) are controlled via the EPP register. To eliminate frequency ramp-up latency while keeping idle temperatures stable (avoiding locking the frequency to absolute maximum at all times), set the EPP profile to `balance_performance`.
 
-```ini
-[Unit]
-Description=Set CPU governor to performance
-After=sysfs.target
+Make this configuration persistent at boot via `systemd-tmpfiles`.
 
-[Service]
-Type=oneshot
-ExecStart=/bin/sh -c 'for file in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > "$file"; done'
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start the service:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now cpu-governor.service
-```
+1. Create `/etc/tmpfiles.d/cpu-epp.conf`:
+   ```text
+   w /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference - - - - balance_performance
+   ```
+2. Apply the rule immediately:
+   ```bash
+   sudo systemd-tmpfiles --create /etc/tmpfiles.d/cpu-epp.conf
+   ```
 
 ### C. Static Network Configuration (`/etc/network/interfaces`)
 To guarantee persistent, conflict-free connectivity on boot, configure `/etc/network/interfaces` for static dual-stack IPv4/IPv6 using the native `ifupdown` tool. Ensure all SSID/password fields with special characters (like `*`) are explicitly quoted to prevent parsing failures:
@@ -268,10 +260,23 @@ To bypass this without compiling from source, the standard and verified solution
     cage flatpak run com.moonlight_stream.Moonlight
     ```
 
-### E. Input Device & Latency Tuning
-USB polling rate issues and mouse acceleration curves can heavily degrade the responsiveness of the remote cursor.
+### E. Input Device & USB Autosuspend Tuning
+USB autosuspend powers down USB devices after 2 seconds of inactivity, which causes a wake-up lag when resuming keyboard or mouse input.
 
 *   **USB Polling Rate Bottleneck (Logitech G305)**: Gaming wireless dongles run at 1000 Hz by default, flooding the client CPU with USB interrupt requests. On low-power hardware, this creates severe lag. Toggle the physical button behind the G305 scroll wheel to **Green LED (Endurance Mode / 125 Hz)** to drastically reduce CPU overhead. Use **Orange LED (1600 DPI)** for standard cursor sensitivity.
+*   **USB Autosuspend Rules**: Disable autosuspend for keyboard/mouse wireless receivers by creating `/etc/udev/rules.d/50-usb-autosuspend.rules`:
+    ```udev
+    # Logitech Receiver
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c53f", ATTR{power/control}="on"
+    # CX 2.4G Keyboard Receiver
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="3554", ATTR{idProduct}=="fa0a", ATTR{power/control}="on"
+    ```
+    Apply without rebooting:
+    ```bash
+    sudo udevadm control --reload-rules
+    sudo udevadm trigger --action=add
+    ```
+    *Note: If `udevadm trigger` causes input lockouts under Cage, perform a hard reboot to safely apply the rules.*
 
 ### F. Moonlight Client Profile Settings
 Open Moonlight-qt and configure:
@@ -279,3 +284,25 @@ Open Moonlight-qt and configure:
 *   **Video Decoder**: Force **Hardware Decoding** (utilizes the Intel HD 630 VA-API block).
 *   **V-Sync**: **Disable V-Sync** (reduces input lag by 1 full frame, accepting minor screen tearing in exchange for immediate cursor response).
 *   **Frame Pacing**: Select **Lowest Latency** (Block-based pacing).
+
+### G. Audio Subsystem Stability (PipeWire & Power Saving)
+Direct ALSA hardware access is prone to crash with `Failed to open audio device: Audio subsystem is not initialized` (exit code `EBUSY`) when Moonlight resets the audio buffer during network hiccups. The sound card power-saving module can also shut down the HDA controller, leading to init failures.
+
+1.  **Disable Audio Driver Power Saving**:
+    Create `/etc/modprobe.d/audio-powersave.conf` to prevent the Intel HDA driver from suspending:
+    ```text
+    options snd_hda_intel power_save=0 power_save_controller=N
+    ```
+
+2.  **Deploy PipeWire Sound Server**:
+    Install and run PipeWire to multiplex the audio channel, avoiding raw ALSA hardware locks:
+    ```bash
+    # Install packages
+    sudo apt update && sudo apt install -y pipewire pipewire-pulse wireplumber
+    
+    # Enable systemd user services globally
+    sudo systemctl --global enable pipewire.service pipewire-pulse.service wireplumber.service
+    
+    # Start services for the active user (e.g. tuco)
+    systemctl --user --machine=tuco@ enable --now pipewire pipewire-pulse wireplumber
+    ```
