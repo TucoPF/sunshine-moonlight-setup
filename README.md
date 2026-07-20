@@ -5,6 +5,25 @@ This repository provides an exhaustive, step-by-step engineering guide to deploy
 
 It covers host network tuning, VM operating system cleanup, GPU passthrough configurations, Wayland/KDE desktop optimization, and client-side performance adjustments.
 
+## 📖 Table of Contents
+
+1. [📐 Architecture & Topology](#-architecture--topology)
+2. [🎛️ Step 1: Host Network Optimization (matrix & skynet)](#️-step-1-host-network-optimization-matrix--skynet)
+3. [🏗️ Step 2: Guest VM OS Cleanup & Validation](#-step-2-guest-vm-os-cleanup--validation)
+   * [A. Disable Virtual Hotplug Modules](#a-disable-virtual-hotplug-modules)
+   * [B. Disable systemd SSH Socket Generator](#b-disable-systemd-ssh-socket-generator)
+   * [C. Repair EFI FAT volume Dirty Bit](#c-repair-efi-fat-volume-dirty-bit)
+   * [D. Update Initramfs](#d-update-initramfs)
+4. [🖥️ Step 3: Graphical Environment & Autologin Setup](#️-step-3-graphical-environment--autologin-setup)
+5. [🎮 Step 4: Sunshine Installation & Hardening](#-step-4-sunshine-installation--hardening)
+6. [💻 Step 5: NUC Client Latency Optimization](#-step-5-nuc-client-latency-optimization)
+   * [A. Disable Wi-Fi Power Saving](#a-disable-wi-fi-power-saving)
+   * [B. Configure CPU Governor to Performance Mode](#b-configure-cpu-governor-to-performance-mode)
+   * [C. Static Network Configuration (`/etc/network/interfaces`)](#c-static-network-configuration-etcnetworkinterfaces)
+   * [D. Headless EGLFS Direct Display Setup (No Xorg/Wayland Compositor)](#d-headless-eglfs-direct-display-setup-no-xorgwayland-compositor)
+   * [E. Input Device & Latency Tuning](#e-input-device--latency-tuning)
+   * [F. Moonlight Client Profile Settings](#f-moonlight-client-profile-settings)
+
 ---
 
 ## 📐 Architecture & Topology
