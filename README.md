@@ -282,8 +282,8 @@ USB autosuspend powers down USB devices after 2 seconds of inactivity, which cau
 Open Moonlight-qt and configure:
 *   **Resolution**: Match TV/Monitor native resolution (`1368x768` or `1920x1080`) to prevent video downscaling and scaling overhead.
 *   **Video Decoder**: Force **Hardware Decoding** (utilizes the Intel HD 630 VA-API block).
-*   **V-Sync**: **Disable V-Sync** (reduces input lag by 1 full frame, accepting minor screen tearing in exchange for immediate cursor response).
-*   **Frame Pacing**: Select **Lowest Latency** (Block-based pacing).
+*   **V-Sync**: **Enable V-Sync** (Must remain enabled; disabling V-Sync causes the Intel HD 630/620 iGPU on the NUC to crash under streaming loads).
+*   **Frame Pacing**: **Disable Frame Pacing** (Reduces input lag by disabling internal frame pacing buffers).
 
 ### G. Audio Subsystem Stability (PipeWire & Power Saving)
 Direct ALSA hardware access is prone to crash with `Failed to open audio device: Audio subsystem is not initialized` (exit code `EBUSY`) when Moonlight resets the audio buffer during network hiccups. The sound card power-saving module can also shut down the HDA controller, leading to init failures.
