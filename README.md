@@ -243,21 +243,30 @@ sudo ip addr flush dev wlp1s0
 sudo systemctl restart networking
 ```
 
-### D. Headless EGLFS Direct Display Setup (No Xorg/Wayland Compositor)
-Rather than executing a heavy desktop environment (like GNOME/KDE) or even a lightweight Wayland Kiosk (like `cage`), launch Moonlight directly on the GPU using the native **EGLFS (KMS/DRM via Mesa)** platform plugin. This yields direct-to-scanout rendering, bypassing any compositor buffering and saving RAM.
+### D. Headless Wayland Kiosk Setup (via Cage Kiosk)
 
-1.  **Install Flatpak & Configure Flathub (User Space)**:
+Using raw EGLFS directly on the physical console TTY from within a Flatpak sandbox is structurally blocked. Flatpak's sandbox proxy isolates D-Bus and blocks the File Descriptor (FD) passing required by `systemd-logind` to hand over the DRM Master lock to a non-root user. 
+
+To bypass this without compiling from source, the standard and verified solution is to run the native, ultra-lightweight **Cage Wayland Kiosk**. Because `cage` runs natively on the host, it handles the VT graphics mode switch and DRM initialization cleanly. Moonlight then runs inside it over Wayland with **Direct Scanout** (bypassing compositor buffering to achieve 0ms latency identical to EGLFS).
+
+1.  **Install Cage Kiosk**:
+    Install the lightweight kiosk compositor natively on the NUC host:
     ```bash
-    sudo apt update && sudo apt install -y flatpak
-    flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-    source /etc/profile.d/flatpak.sh
-    flatpak install --user -y flathub com.moonlight_stream.Moonlight
+    sudo apt update && sudo apt install -y cage
     ```
-2.  **Execute Directly from TTY/SSH**:
+
+2.  **Apply Flatpak Overrides for Hardware Decoding and Input**:
+    To allow Moonlight to access the Intel VA-API decoding nodes (`renderD128`) and keyboard/mouse devices inside the sandbox, apply these overrides:
     ```bash
-    flatpak run com.moonlight_stream.Moonlight
+    sudo flatpak override --device=all --device=dri --talk-name=org.freedesktop.login1 com.moonlight_stream.Moonlight
     ```
-    *Note: Moonlight will auto-detect the lack of X11/Wayland display server and transparently initialize the EGLFS plugin directly on `/dev/dri/card0`.*
+    *Note: Ensure `SDL_DRM_DEVICE` is NOT set in the Flatpak overrides (remove it with `sudo flatpak override --unset-env=SDL_DRM_DEVICE com.moonlight_stream.Moonlight` if present) to allow SDL to cleanly hook into Wayland rather than conflicting with Cage for the DRM lock.*
+
+3.  **Execute Moonlight inside Cage**:
+    Launch Moonlight nested inside the Cage kiosk compositor from your TTY:
+    ```bash
+    cage flatpak run com.moonlight_stream.Moonlight
+    ```
 
 ### E. Input Device & Latency Tuning
 USB polling rate issues and mouse acceleration curves can heavily degrade the responsiveness of the remote cursor.
