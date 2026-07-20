@@ -272,14 +272,6 @@ To bypass this without compiling from source, the standard and verified solution
 USB polling rate issues and mouse acceleration curves can heavily degrade the responsiveness of the remote cursor.
 
 *   **USB Polling Rate Bottleneck (Logitech G305)**: Gaming wireless dongles run at 1000 Hz by default, flooding the client CPU with USB interrupt requests. On low-power hardware, this creates severe lag. Toggle the physical button behind the G305 scroll wheel to **Green LED (Endurance Mode / 125 Hz)** to drastically reduce CPU overhead. Use **Orange LED (1600 DPI)** for standard cursor sensitivity.
-*   **Mouse Acceleration Settings (KDE Guest)**: Force a Flat acceleration curve on the guest virtual pointer. Create or edit `/home/tuco/.config/kcminputrc` to include:
-    ```ini
-    [Libinput][48879][57005][Mouse passthrough]
-    Enabled=true
-    PointerAccelerationProfile=1
-    PointerAcceleration=0.000
-    ```
-    *(Note: KDE System Settings may visually default the dropdown back to "QEMU Tablet" due to a GUI bug, but Wayland respects the underlying file values).*
 
 ### F. Moonlight Client Profile Settings
 Open Moonlight-qt and configure:
