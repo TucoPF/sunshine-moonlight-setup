@@ -11,17 +11,17 @@ It covers host network tuning, VM operating system cleanup, GPU passthrough conf
 
 ```mermaid
 graph TD
-    subgraph Host [skynet - Proxmox Host (Ryzen 9700X)]
+    subgraph Host ["skynet - Proxmox Host (Ryzen 9700X)"]
         VM[Debian 13 VM Workstation]
         iGPU[AMD Radeon iGPU Passthrough] --> VM
         Plug[HDMI Dummy Plug 1080p] --> iGPU
     end
     
-    subgraph Network [Local Network (BBR & fq Optimized)]
+    subgraph Network ["Local Network (BBR & fq Optimized)"]
         VM -- "Sunshine (KMS Video + PipeWire Audio)" --> NUC[Intel NUC Client (Debian 13)]
     end
 
-    NUC -- "Moonlight-qt (Intel HD 620 HW Decode)" --> Display[TV Monitor 1368x768 / 1080p]
+    NUC -- "Moonlight-qt (Intel HD 620 HW Decode)" --> Display["TV Monitor 1368x768 / 1080p"]
 ```
 
 *   **Host Server (`skynet`)**: Custom ATX Tower, AMD Ryzen 7 9700X, 32GB DDR5, running Proxmox VE 9.2.3. Passes the onboard graphics (`79:00.0` VGA and `79:00.1` Audio) to the guest VM.
